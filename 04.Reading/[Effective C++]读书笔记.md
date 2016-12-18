@@ -63,3 +63,61 @@ C++规定，对象的成员变量的初始化动作发生在进入构造函数�
 样好”的成员变量，改用它们的赋值操作，并将那些赋值操作移往某个函数，供所有构造函数调用。
 
 不同编译单元内定义之 non-local static 对象的初始化次序无明确定义。改用 Singleton 模式是个不错的解决办法。
+
+#构造/析构/赋值运算
+
+##条款05：了解C++默默编写并调用哪些函数
+
+编译器产出的析构函数是个 non-virtual。
+
+编译器拒绝为以下情况生成对应的 copy 构造函数和赋值构造函数：
+
+- 内含 reference 成员的 class。
+- 内含 const 成员的 class。
+- base class 将 copy 或 赋值构造声明为 private 的 derived class。
+
+##条款06：若不想使用编译器自动生成的函数，就该明确拒绝
+
+将成员函数声明为 private 而且故意不实现它们。
+
+##条款07：为多态基类声明 virtual 析构函数
+
+C++ 明确指出，当 derived class 对象经由一个 base class 指针被删除，而该 base class 带着一个 non-virtual 析构函数，其结果未定义。
+
+不要企图继承一个标准容器或任何其他“带有 non-virtual 析构函数”的class。
+
+当你希望拥有抽象 class，你可以为它声明一个 pure virtual 析构函数，且必须为其提供一份定义，否则会出现链接错误。
+
+Class 的设计目的如果不是作为 base classes 使用，或不是为了具备多态性，就不该声明 virtual 析构函数。
+
+##条款08：别让异常逃离析构函数
+
+- 析构函数绝对不要吐出异常。如果一个被析构函数调用的函数可能抛出异常，析构函数应该捕捉任何异常，然后吞下它们或结束程序。
+- 如果客户需要对某个操作函数运行期间抛出的异常做出反应，那么 class 应该提供一个普通函数（而非在析构函数中）执行该操作。
+
+##条款09：绝不在构造和析构过程中调用 virtual 函数
+
+##条款10：令 operator= 返回一个 reference to \*this
+
+为了实现“连锁赋值”，赋值操作符必须返回一个 reference 指向操作符左侧的实参。
+
+##条款11：在 operator= 中处理“自我赋值”
+
+让 operator= 具备“异常安全性”往往自动获得“自我赋值安全”的回报。一群精心安排的语句就可以导出异常安全的代码。
+
+```c++
+Widget& Widget::operator=(const Widget& rhs)
+{
+     Bitmap *pOrig = pb;
+     pb = new Bitmap(*rhs.pb);
+     delete pOrig;
+     return *this;
+}
+```
+
+##条款12：复制对象时勿忘其每一个成分
+
+如果你为 class 添加一个成员变量，你必须同时修改 copying 函数。
+
+- Copying 函数应该确保复制“对象内的所有成员变量”及“所有 base class 成分”。
+- 不要尝试以某个 copying 函数实现另一个 copying 函数。应该将共同机能放进第三个函数中，并由两个 copying 函数共同调用。
